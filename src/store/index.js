@@ -30,23 +30,14 @@ const initMongoConnection = async () => {
  * @param state {{health: number; exp: number; mood: number; mined_togi: number;}}
  * @returns {Promise<{ type: keyof typeof import("../constants").RESPONSE_TYPES; data: any}>}
  */
-const insertOrUpdateUserState = async (walletId, state) => {
+const initializeUserState = async (walletId, state) => {
   try {
-    let user = await userState.findOne({ walletId });
+    const user = await userState.insertOne({ walletId, state });
 
-    if (!user) {
-      user = await userState.insertOne({ walletId, state });
-      return {
-        type: RESPONSE_TYPES.INSERT,
-        data: user,
-      };
-    } else {
-      user = await userState.updateOne({ walletId }, { $set: { state } });
-      return {
-        type: RESPONSE_TYPES.UPDATE,
-        data: user,
-      };
-    }
+    return {
+      type: RESPONSE_TYPES.UPDATE,
+      data: user,
+    };
   } catch (error) {
     return {
       type: RESPONSE_TYPES.FAILED,
@@ -84,6 +75,38 @@ const queryUserState = async walletId => {
   }
 };
 
+/**
+ *
+ * @param {string} walletId
+ * @param {{health: number; exp: number; mood: number; mined_togi: number;}} state
+ * @returns {Promise<{ type: keyof typeof import("../constants").RESPONSE_TYPES; data: any}>}
+ */
+const updateUserState = async (walletId, state) => {
+  try {
+    const userQueryResponse = await queryUserState(walletId);
+
+    assert.ok(userQueryResponse.type !== RESPONSE_TYPES.FAILED, userQueryResponse.data.message);
+
+    const newState = Object.assign(userQueryResponse.data.state, state);
+
+    const userUpdateResponse = await userState.updateOne({ walletId }, { $set: { state: newState } });
+
+    return {
+      type: RESPONSE_TYPES.UPDATE,
+      data: userUpdateResponse,
+    };
+  } catch (error) {
+    return {
+      type: RESPONSE_TYPES.FAILED,
+      data: {
+        message: error.message,
+        code: error.code,
+      },
+    };
+  }
+};
+
 module.exports.initMongoConnection = initMongoConnection;
-module.exports.insertOrUpdateUserState = insertOrUpdateUserState;
+module.exports.initializeUserState = initializeUserState;
 module.exports.queryUserState = queryUserState;
+module.exports.updateUserState = updateUserState;

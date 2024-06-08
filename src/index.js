@@ -7,14 +7,10 @@ const port = parseInt(process.env.PORT || "7500");
 const app = express();
 const server = createServer(app);
 
-const initAll = () => {
-  (async () => {
-    await initMongoConnection();
-    await initializeSocketServer(server);
-  })();
-};
+initMongoConnection().then(() => {
+  initializeSocketServer(server);
+});
 
 server.listen(port, () => {
-  initAll();
   console.log("Server is running on port: %d", port);
 });
