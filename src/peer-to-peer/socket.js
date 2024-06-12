@@ -1,5 +1,5 @@
 const { Server: SocketServer } = require("socket.io");
-const { queryUserState } = require("../store");
+const { queryUserState, initializeUserState, updateUserState } = require("../store");
 const { RESPONSE_TYPES } = require("../constants");
 
 /**
@@ -31,7 +31,9 @@ const initializeSocketServer = httpServer => {
 const listenForConnection = () => {
   if (io !== null)
     io.on("connect", socket => {
+      initUserStateWatch(socket);
       registerSocket(socket);
+      initUpdateUserStateWatch(socket);
     });
 };
 
@@ -45,7 +47,7 @@ const registerSocket = socket => {
     const queryFailed = userStateQuery.type === RESPONSE_TYPES.FAILED;
 
     if (queryFailed) {
-      return socket.emit("failed_to_register", {
+      return socket.emit("failure", {
         ...userStateQuery,
         message: "must initialize user state first",
       });
@@ -63,6 +65,43 @@ const registerSocket = socket => {
     }));
 
     console.table(socketsMapJson);
+  });
+};
+
+/**
+ *
+ * @param {import("socket.io").Socket} socket
+ */
+const initUserStateWatch = socket => {
+  socket.on("initialize_user_state", async ({ walletId }) => {
+    await initializeUserState(walletId, {
+      health: 100,
+      mood: 0,
+      mined_togi: 0,
+      exp: 0,
+    });
+  });
+};
+
+/**
+ *
+ * @param {import("socket.io").Socket} socket
+ */
+const initUpdateUserStateWatch = socket => {
+  socket.on("update_user_state", async ({ walletId, state }) => {
+    const userStateQuery = await queryUserState(walletId);
+    const queryFailed = userStateQuery.type === RESPONSE_TYPES.FAILED;
+
+    if (queryFailed) {
+      if (queryFailed) {
+        return socket.emit("failure", {
+          ...userStateQuery,
+          message: "must initialize user state first",
+        });
+      }
+    }
+
+    await updateUserState(walletId, state);
   });
 };
 
