@@ -1,0 +1,8 @@
+const RESPONSE_TYPES = {
+  INSERT: "INSERT",
+  UPDATE: "UPDATE",
+  READ: "READ",
+  FAILED: "FAILED",
+};
+
+module.exports.RESPONSE_TYPES = RESPONSE_TYPES;
